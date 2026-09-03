@@ -1,0 +1,96 @@
+name: RAG Agent CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run unit + integration tests
+        run: uv run python -m pytest tests/ -q
+
+  # Regression gate: a small retrieval + postprocessing smoke eval that
+  # needs NO API key. Runs on every push.
+  eval-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Retrieval & postprocessing smoke checks
+        run: uv run python tests/smoke_eval.py
+
+  # Full 100-question LLM-judged benchmark. Gated by the repository variable
+  # RUN_BENCHMARK=true (secrets cannot be read in job-level `if` expressions);
+  # also runnable manually via workflow_dispatch. Requires the GROQ_API_KEY
+  # secret and the benchmark PDF under data/.
+  eval-benchmark:
+    if: ${{ vars.RUN_BENCHMARK == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Check benchmark PDF is present
+        env:
+          EVAL_PDF: ${{ github.workspace }}/data/9781513563602-mod01.pdf
+        run: |
+          if [ ! -f "$EVAL_PDF" ]; then
+            echo "::error::Benchmark PDF missing at $EVAL_PDF - place it under data/ to enable this job."
+            exit 1
+          fi
+
+      - name: Run 100-question benchmark (8b models, quota-friendly)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          EVAL_PDF: ${{ github.workspace }}/data/9781513563602-mod01.pdf
+        run: |
+          uv run python evaluation/evaluate_pdf_module.py --label ci_benchmark \
+            --judge-model openai/gpt-oss-20b \
+            --gen-model openai/gpt-oss-20b
+
+      - name: Enforce accuracy floor
+        run: uv run python tests/check_accuracy.py --label ci_benchmark --min-accuracy 0.80
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: |
+            evaluation/artifacts/mod01_results_ci_benchmark.json
+            evaluation/artifacts/EVALUATION_REPORT_MOD01.md

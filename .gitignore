@@ -1,0 +1,36 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# macOS metadata
+._*
+.DS_Store
+
+# Evaluation artifacts (large JSON outputs)
+evaluation/artifacts/
+
+# Benchmark corpus: downloaded PDFs + cached parses (~230MB, re-fetchable
+# via evaluation/fetch_corpus.sh)
+data/
+
+# Local Qdrant store (rebuilt from .workspace/chunks.json)
+.qdrant_corpus/
+
+# Local workspace (user-uploaded documents & chats)
+.workspace/
+
+# Logs
+*.log
+
+# IDE / agent tooling
+.qoder/
+
+# Personal documents - never commit
+Consent_Letter_*.txt

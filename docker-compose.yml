@@ -1,0 +1,15 @@
+services:
+  rag-agent:
+    build: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      - QDRANT_PATH=/data/qdrant
+    volumes:
+      - qdrant_data:/data/qdrant
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
