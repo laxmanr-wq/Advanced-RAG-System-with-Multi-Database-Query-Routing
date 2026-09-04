@@ -155,8 +155,7 @@ tests/          unit + integration tests, CI gates
 evaluation/     benchmark harnesses + corpus fetch script
 app.py          Streamlit UI
 
-## Repository Structure
-```
+```text
 ├── app.py                     # Streamlit frontend application
 ├── pyproject.toml             # Project dependencies and packaging configuration
 ├── uv.lock                    # Dependency lockfile
@@ -193,3 +192,4 @@ app.py          Streamlit UI
     ├── evaluate_ragas.py      # RAGAS metrics runner (Faithfulness, Relevancy)
     ├── evaluate_hard.py       # Multi-step reasoning evaluation
     └── evaluate_pdf_module.py # Ingestion speed and parsing accuracy benchmarks
+```
