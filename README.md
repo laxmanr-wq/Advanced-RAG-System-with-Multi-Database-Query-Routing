@@ -46,6 +46,80 @@ uv run streamlit run app.py # http://localhost:8501
 
 Requires Python 3.10+ and a free key from [console.groq.com](https://console.groq.com).
 
++-------------------+
+                      |    User Query     |
+                      +---------+---------+
+                                |
+                                v
+                   +-------------------------+
+                   | Prompt Injection Filter |
+                   +------------+------------+
+                                |
+                                v
+                   +-------------------------+
+                   | Contextualize Follow-up |  (Resolves conversational context)
+                   +------------+------------+
+                                |
+                                v
+                   +-------------------------+
+                   |   Domain Query Router   |  (LLM route + JSON/keyword fallback)
+                   +------------+------------+
+                                |
+            +-------------------+-------------------+
+            |                   |                   |
+            v                   v                   v
+      [ Database A ]      [ Database B ]      [ Database C ]
+            |                   |                   |
+            +-------------------+-------------------+
+                                |
+                                v
+                   +-------------------------+
+                   |  Hybrid Search + RRF    |  (Dense BGE-Small + Sparse BM25)
+                   +------------+------------+
+                                |
+                                v
+                   +-------------------------+
+                   |    Retrieval Grader     |
+                   +------------+------------+
+                                |
+            +-------------------+-------------------+
+            |                                       |
+    [ Context Weak ]                         [ Context Good ]
+            |                                       |
+            v                                       |
+    +---------------+                               |
+    | Query Rewrite |                               |
+    +-------+-------+                               |
+            |                                       |
+            v                                       |
+    +---------------+                               |
+    | Second Search |                               |
+    +-------+-------+                               |
+            |                                       |
+      +-----+-----+                                 |
+      |           |                                 |
+  [ Failed ]  [ Passed ]                            |
+      |           |                                 |
+      v           +----------------+----------------+
++------------+                     |
+| Web Search |                     |
++-----+------+                     |
+      |                            |
+      +--------------+-------------+
+                     |
+                     v
+        +-------------------------+
+        |   Synthesis Engine      |  (Groq LPU)
+        +------------+------------+
+                     |
+                     v
+        +-------------------------+
+        | Numerical Guardrail     |  (Validates all numbers in output)
+        +------------+------------+
+                     |
+                     v
+               Final Response
+
 ## Tests & evaluation
 
 ```bash
@@ -79,4 +153,42 @@ rag_agent/      core package — parsing, retrieval, routing, agentic loop, guar
 tests/          unit + integration tests, CI gates
 evaluation/     benchmark harnesses + corpus fetch script
 app.py          Streamlit UI
+
+## Repository Structure
 ```
+├── app.py                     # Streamlit frontend application
+├── pyproject.toml             # Project dependencies and packaging configuration
+├── uv.lock                    # Dependency lockfile
+├── .env.example               # Example environment variables
+│
+├── rag_agent/                 # Main RAG engine package
+│   ├── databases.py           # Vector database initialization and collections
+│   ├── embeddings.py          # FastEmbed dense and sparse configurations
+│   ├── router.py              # Semantic intent classifier and route routing
+│   ├── retriever.py           # Hybrid retrieval logic
+│   ├── reranker.py            # Reciprocal Rank Fusion (RRF) algorithms
+│   ├── grading.py             # Retrieved context relevance grader
+│   ├── query_rewrite.py       # Context-aware query rewriting
+│   ├── fallback.py            # External web search fallback
+│   ├── guardrails.py          # Input injection defense & numerical checks
+│   ├── contextualize.py       # Conversational follow-up resolver
+│   ├── memory.py              # Chat session memory management
+│   ├── parser.py              # Header-preserving document ingestion
+│   ├── pipeline.py            # Main agentic execution pipeline
+│   ├── llm.py                # Groq client wrapper
+│   ├── telemetry.py           # Latency and stage profiling
+│   ├── quota.py               # Rate limiting and quota management
+│   └── postprocess.py         # Citation rendering and output formatting
+│
+├── tests/                     # Test suite
+│   ├── smoke_eval.py          # Fast, keyless smoke tests
+│   ├── test_pipeline.py       # Full pipeline integration tests
+│   ├── test_router.py         # Routing classifier tests
+│   ├── test_parser.py         # Parsing and table retention tests
+│   └── ...                    # Specific unit test modules
+│
+└── evaluation/                # Benchmarking and metrics
+    ├── fetch_corpus.sh        # Shell script to download evaluation datasets
+    ├── evaluate_ragas.py      # RAGAS metrics runner (Faithfulness, Relevancy)
+    ├── evaluate_hard.py       # Multi-step reasoning evaluation
+    └── evaluate_pdf_module.py # Ingestion speed and parsing accuracy benchmarks
