@@ -46,80 +46,81 @@ uv run streamlit run app.py # http://localhost:8501
 
 Requires Python 3.10+ and a free key from [console.groq.com](https://console.groq.com).
 
-+-------------------+
-                      |    User Query     |
-                      +---------+---------+
-                                |
-                                v
-                   +-------------------------+
-                   | Prompt Injection Filter |
-                   +------------+------------+
-                                |
-                                v
-                   +-------------------------+
-                   | Contextualize Follow-up |  (Resolves conversational context)
-                   +------------+------------+
-                                |
-                                v
-                   +-------------------------+
-                   |   Domain Query Router   |  (LLM route + JSON/keyword fallback)
-                   +------------+------------+
-                                |
-            +-------------------+-------------------+
-            |                   |                   |
-            v                   v                   v
-      [ Database A ]      [ Database B ]      [ Database C ]
-            |                   |                   |
-            +-------------------+-------------------+
-                                |
-                                v
-                   +-------------------------+
-                   |  Hybrid Search + RRF    |  (Dense BGE-Small + Sparse BM25)
-                   +------------+------------+
-                                |
-                                v
-                   +-------------------------+
-                   |    Retrieval Grader     |
-                   +------------+------------+
-                                |
-            +-------------------+-------------------+
-            |                                       |
-    [ Context Weak ]                         [ Context Good ]
-            |                                       |
-            v                                       |
-    +---------------+                               |
-    | Query Rewrite |                               |
-    +-------+-------+                               |
-            |                                       |
-            v                                       |
-    +---------------+                               |
-    | Second Search |                               |
-    +-------+-------+                               |
-            |                                       |
-      +-----+-----+                                 |
-      |           |                                 |
-  [ Failed ]  [ Passed ]                            |
-      |           |                                 |
-      v           +----------------+----------------+
-+------------+                     |
-| Web Search |                     |
-+-----+------+                     |
-      |                            |
-      +--------------+-------------+
-                     |
-                     v
-        +-------------------------+
-        |   Synthesis Engine      |  (Groq LPU)
-        +------------+------------+
-                     |
-                     v
-        +-------------------------+
-        | Numerical Guardrail     |  (Validates all numbers in output)
-        +------------+------------+
-                     |
-                     v
-               Final Response
-
+```
+                      +-------------------------+
+                      |       User Query        |
+                      +------------+------------+
+                                   |
+                                   v
+                      +-------------------------+
+                      | Prompt Injection Filter |
+                      +------------+------------+
+                                   |
+                                   v
+                      +-------------------------+
+                      | Contextualize Follow-up |  (Resolves conversational context)
+                      +------------+------------+
+                                   |
+                                   v
+                      +-------------------------+
+                      |   Domain Query Router   |  (LLM route + JSON/keyword fallback)
+                      +------------+------------+
+                                   |
+            +----------------------+----------------------+
+            |                      |                      |
+            v                      v                      v
+      [ Database A ]         [ Database B ]         [ Database C ]
+            |                      |                      |
+            +----------------------+----------------------+
+                                   |
+                                   v
+                      +-------------------------+
+                      |   Hybrid Search + RRF   |  (Dense BGE-Small + Sparse BM25)
+                      +------------+------------+
+                                   |
+                                   v
+                      +-------------------------+
+                      |    Retrieval Grader     |
+                      +------------+------------+
+                                   |
+            +----------------------+----------------------+
+            |                                             |
+     [ Context Weak ]                              [ Context Good ]
+            |                                             |
+            v                                             |
+     +--------------+                                     |
+     | Query Rewrite|                                     |
+     +------+-------+                                     |
+            |                                             |
+            v                                             |
+     +--------------+                                     |
+     | Second Search|                                     |
+     +------+-------+                                     |
+            |                                             |
+      +-----+-----+                                       |
+      |           |                                       |
+  [ Failed ]  [ Passed ]                                  |
+      |           |                                       |
+      v           +-----------------------+---------------+
++------------+                            |
+| Web Search |                            |
++-----+------+                            |
+      |                                   |
+      +-------------------+---------------+
+                          |
+                          v
+             +-------------------------+
+             |    Synthesis Engine     |  (Groq LPU)
+             +------------+------------+
+                          |
+                          v
+             +-------------------------+
+             |   Numerical Guardrail   |  (Validates numbers against context)
+             +------------+------------+
+                          |
+                          v
+                    Final Response
+```
 ## Tests & evaluation
 
 ```bash
